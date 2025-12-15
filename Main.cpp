@@ -12,8 +12,8 @@ int main() {
 
     // Начальные условия
     double x = 0.0;
-    double u = 0.0;      // u(0)
-    double v = 0.0;      // u'(0)
+    double u1 = 0.0;      // u(0)
+    double u2 = 0.0;      // u'(0)
 
     // Численные параметры
     double h = 0.001;
@@ -22,32 +22,32 @@ int main() {
     ofstream out("beam_RK4.txt");
 
     while (x <= x_max) {
-        out << x << " " << u << " " << v << endl;
+        auto f1 = [](double u2) {
+            return u2;
+        };
 
-        auto f1 = [](double v) {
-            return v;
-            };
-
-        auto f2 = [&](double x, double v) {
+        auto f2 = [&](double x, double u2) {
             double factor = (1.0 / L - x / (L * L)) * (P * L * L / EI);
-            return pow(1.0 + v * v, 1.5) * factor;
-            };
+            return pow(1.0 + u2 * u2, 1.5) * factor;
+        };
 
         // RK4
-        double k1u = h * f1(v);
-        double k1v = h * f2(x, v);
+        double k1u1 = h * f1(u2);
+        double k1u2 = h * f2(x, u2);
 
-        double k2u = h * f1(v + k1v / 2.0);
-        double k2v = h * f2(x + h / 2.0, v + k1v / 2.0);
+        double k2u1 = h * f1(u2 + k1u2 / 2.0);
+        double k2u2 = h * f2(x + h / 2.0, u2 + k1u2 / 2.0);
 
-        double k3u = h * f1(v + k2v / 2.0);
-        double k3v = h * f2(x + h / 2.0, v + k2v / 2.0);
+        double k3u1 = h * f1(u2 + k2u2 / 2.0);
+        double k3u2 = h * f2(x + h / 2.0, u2 + k2u2 / 2.0);
 
-        double k4u = h * f1(v + k3v);
-        double k4v = h * f2(x + h, v + k3v);
+        double k4u1 = h * f1(u2 + k3u2);
+        double k4u2 = h * f2(x + h, u2 + k3u2);
 
-        u += (k1u + 2 * k2u + 2 * k3u + k4u) / 6.0;
-        v += (k1v + 2 * k2v + 2 * k3v + k4v) / 6.0;
+        u1 += (k1u1 + 2 * k2u1 + 2 * k3u1 + k4u1) / 6.0;
+        u2 += (k1u2 + 2 * k2u2 + 2 * k3u2 + k4u2) / 6.0;
+
+        out << x << " " << u1 << " " << u2 << endl;
 
         x += h;
     }
