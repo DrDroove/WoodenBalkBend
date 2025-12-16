@@ -50,7 +50,7 @@ void RK4_step(const double& x, double& v1, double& v2, const double& h, const do
     v2 += (k1u2 + 2 * k2u2 + 2 * k3u2 + k4u2) / 6.0;
 }
 
-std::vector<RK4_stepdata> RK4_solve(double L = 1.0, double P = 2.0, double EI = 1.0, double eps = 1e-7, double delta = 1e-7 , double x0 = 0.0, double u10 = 0.0, double u20 = 0.0, double h = 1e-2, double xmax = 1.0, int maxSteps = 1000000) {
+std::vector<RK4_stepdata> RK4_solve_adaptive(double L = 1.0, double P = 2.0, double EI = 1.0, double eps = 1e-7, double delta = 1e-7 , double x0 = 0.0, double u10 = 0.0, double u20 = 0.0, double h = 1e-2, double xmax = 1.0, int maxSteps = 1000000) {
     double x = x0;
     double v1 = u10; double v2 = u20;
     double x_tmp = x, v1_tmp = v1, v2_tmp = v2;
@@ -82,7 +82,7 @@ std::vector<RK4_stepdata> RK4_solve(double L = 1.0, double P = 2.0, double EI = 
 
         table.push_back(row);
     } //first row
-
+    step++;
     while ((x + h <= xmax) && (iter < maxSteps)) {
         RK4_stepdata row;
         bool step_accepted = false;
@@ -142,6 +142,84 @@ std::vector<RK4_stepdata> RK4_solve(double L = 1.0, double P = 2.0, double EI = 
             row.c2 = 1;
             flag = 1;
         }
+        if (std::fabs(xmax - x) < delta) break;
+        if (step + iter - 1 > maxSteps) break;
+
+    }
+    return table;
+}
+
+
+std::vector<RK4_stepdata> RK4_solve_const(double L = 1.0, double P = 2.0, double EI = 1.0, double eps = 1e-7, double delta = 1e-7, double x0 = 0.0, double u10 = 0.0, double u20 = 0.0, double h = 1e-2, double xmax = 1.0, int maxSteps = 1000000) {
+    double x = x0;
+    double v1 = u10; double v2 = u20;
+    double x_tmp = x, v1_tmp = v1, v2_tmp = v2;
+
+    double s1 = 0.0, s2 = 0.0, error = 0.0;
+
+    int step = 0;
+    int p = 4; //method order
+    int iter = 0;
+
+    std::vector<RK4_stepdata> table;
+
+    {
+        RK4_stepdata row;
+        row.i = step;
+        row.xi = x;
+        row.v1i = v1;
+        row.v1_2i = v1;
+        row.v2i = v2;
+        row.v2_2i = v2;
+        row.v1i_v1_2i = 0.0;
+        row.v2i_v2_2i = 0.0;
+        row.error = 0.0;
+        row.s1 = 0.0;
+        row.s2 = 0.0;
+        row.hi = h;
+        row.c1 = 0;
+        row.c2 = 0;
+
+        table.push_back(row);
+    } //first row
+    step++;
+    while ((x + h <= xmax) && (iter < maxSteps)) {
+        RK4_stepdata row;
+        bool step_accepted = false;
+        row.i = step;
+        row.c1 = 0; //double
+        row.c2 = 0; //half
+   
+        iter++;
+        x_tmp = x;
+        v1_tmp = v1;
+        v2_tmp = v2;
+        RK4_step(x, v1, v2, h, L, P, EI);
+
+
+        RK4_step(x_tmp, v1_tmp, v2_tmp, h / 2.0, L, P, EI);
+        x_tmp += h / 2.0;
+        RK4_step(x_tmp, v1_tmp, v2_tmp, h / 2.0, L, P, EI);
+
+        s1 = std::abs(v1 - v1_tmp) / (pow(2, p) - 1);
+        s2 = std::abs(v2 - v2_tmp) / (pow(2, p) - 1);
+
+        error = sqrt(s1 * s1 + s2 * s2); //Euclidus norm
+
+        row.v1i = v1;
+        row.v2i = v2;
+        row.v1_2i = v1_tmp;
+        row.v2_2i = v2_tmp;
+        row.v1i_v1_2i = v1 - v1_tmp;
+        row.v2i_v2_2i = v2 - v2_tmp;
+        row.error = error;
+        x = x + h;
+
+        step++;
+        row.hi = h;
+        row.xi = x;
+        table.push_back(row);
+        
         if (std::fabs(xmax - x) < delta) break;
         if (step + iter - 1 > maxSteps) break;
 
